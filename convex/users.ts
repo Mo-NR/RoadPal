@@ -9,7 +9,7 @@ export const getMe = query(async (ctx) => {
 
   // Find user by auth identity
   const user = await ctx.db
-    .query("users")
+    .query("appUsers")
     .withIndex("by_identity", (q) => q.eq("identityId", identity.subject))
     .first();
 
@@ -23,16 +23,16 @@ export const ensureUserOnLogin = mutation(async (ctx) => {
     throw new Error("Not authenticated");
   }
 
-  // Check if user already exists
+  // Check if appUsers row already exists
   const existingUser = await ctx.db
-    .query("users")
+    .query("appUsers")
     .withIndex("by_identity", (q) => q.eq("identityId", identity.subject))
     .first();
 
   const now = Date.now();
 
   if (existingUser) {
-    // Update existing user
+    // Update existing user - patch updatedAt and optional fields, preserve createdAt
     await ctx.db.patch(existingUser._id, {
       email: identity.email ?? existingUser.email,
       name: identity.name ?? existingUser.name,
@@ -41,8 +41,8 @@ export const ensureUserOnLogin = mutation(async (ctx) => {
     });
     return await ctx.db.get(existingUser._id);
   } else {
-    // Create new user
-    const userId = await ctx.db.insert("users", {
+    // Create new appUsers row
+    const userId = await ctx.db.insert("appUsers", {
       identityId: identity.subject,
       email: identity.email,
       name: identity.name,
@@ -63,7 +63,7 @@ export const makeMeAdmin = mutation(async (ctx) => {
   }
 
   const user = await ctx.db
-    .query("users")
+    .query("appUsers")
     .withIndex("by_identity", (q) => q.eq("identityId", identity.subject))
     .first();
 

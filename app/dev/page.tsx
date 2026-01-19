@@ -22,9 +22,28 @@ export default function DevPage() {
   // Ensure user exists after login
   useEffect(() => {
     if (isAuthed && !user && !hasEnsuredUser) {
-      void ensureUserOnLogin().then(() => {
-        setHasEnsuredUser(true);
-      });
+      // Increased delay to ensure Convex auth identity is fully propagated
+      const timeoutId = setTimeout(() => {
+        void ensureUserOnLogin()
+          .then(() => {
+            setHasEnsuredUser(true);
+          })
+          .catch((error) => {
+            console.error("Failed to ensure user:", error);
+            // Retry once after a longer delay
+            setTimeout(() => {
+              void ensureUserOnLogin()
+                .then(() => {
+                  setHasEnsuredUser(true);
+                })
+                .catch((retryError) => {
+                  console.error("Retry also failed:", retryError);
+                });
+            }, 500);
+          });
+      }, 100); // Reduced delay - user already created by callback
+
+      return () => clearTimeout(timeoutId);
     } else if (user) {
       setHasEnsuredUser(true);
     }
